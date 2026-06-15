@@ -47,11 +47,23 @@ def swap_face(source_face: Any, target_face: Any, temp_frame: np.ndarray) -> np.
 
     try:
         logging.debug(f"Swap en cours - Frame shape: {temp_frame.shape}")
+
+        # Conserver l'image d'origine si on doit préserver le teint réel
+        original_frame = (
+            temp_frame.copy() if core.globals.preserve_skin_tone else None
+        )
+
         # Apply the face swap
         swapped_frame = face_swapper.get(
             temp_frame, target_face, source_face, paste_back=True
         )
         logging.debug(f"Swap effectué - Result shape: {swapped_frame.shape}")
+
+        # Réimposer la carnation d'origine (traits du joueur, teint de l'utilisateur)
+        if core.globals.preserve_skin_tone and original_frame is not None:
+            swapped_frame = preserve_original_skin_tone(
+                swapped_frame, original_frame, target_face
+            )
 
         if core.globals.mouth_mask:
             # Create a mask for the target face
@@ -290,3 +302,50 @@ def apply_color_transfer(source: np.ndarray, target: np.ndarray) -> np.ndarray:
     source = (source - source_mean) * (target_std / source_std) + target_mean
 
     return cv2.cvtColor(np.clip(source, 0, 255).astype("uint8"), cv2.COLOR_LAB2BGR)
+
+
+def preserve_original_skin_tone(
+    swapped_frame: np.ndarray, original_frame: np.ndarray, target_face: Any
+) -> np.ndarray:
+    """Réimpose la carnation d'origine sur le visage swappé.
+
+    Travaille dans l'espace LAB : conserve le canal L (luminance / relief du
+    joueur) et reprend les canaux a/b (couleur de peau) de l'image d'origine,
+    dans la zone du visage avec un fondu progressif des bords. Le teint reste
+    donc celui de la personne filmée tout en gardant les traits du joueur.
+    """
+    try:
+        mask = create_face_mask(target_face, original_frame)
+        if mask is None or mask.max() == 0:
+            return swapped_frame
+
+        ys, xs = np.where(mask > 0)
+        min_x, max_x = int(xs.min()), int(xs.max())
+        min_y, max_y = int(ys.min()), int(ys.max())
+
+        swapped_roi = swapped_frame[min_y:max_y + 1, min_x:max_x + 1]
+        original_roi = original_frame[min_y:max_y + 1, min_x:max_x + 1]
+        mask_roi = mask[min_y:max_y + 1, min_x:max_x + 1]
+
+        swapped_lab = cv2.cvtColor(swapped_roi, cv2.COLOR_BGR2LAB)
+        original_lab = cv2.cvtColor(original_roi, cv2.COLOR_BGR2LAB)
+
+        # L du visage swappé (relief du joueur), a/b de l'original (teint réel)
+        merged_lab = swapped_lab.copy()
+        merged_lab[:, :, 1] = original_lab[:, :, 1]
+        merged_lab[:, :, 2] = original_lab[:, :, 2]
+        merged_bgr = cv2.cvtColor(merged_lab, cv2.COLOR_LAB2BGR)
+
+        # Fondu progressif via le masque adouci
+        alpha = cv2.GaussianBlur(mask_roi.astype(np.float32), (0, 0), sigmaX=6)
+        alpha = np.clip(alpha / 255.0, 0.0, 1.0)[:, :, np.newaxis]
+
+        blended = (merged_bgr * alpha + swapped_roi * (1.0 - alpha)).astype(np.uint8)
+
+        # swapped_frame est un tableau neuf renvoyé par inswapper : on écrit la
+        # ROI directement, sans copie pleine image.
+        swapped_frame[min_y:max_y + 1, min_x:max_x + 1] = blended
+        return swapped_frame
+    except Exception as e:
+        logging.debug(f"Erreur préservation du teint: {e}")
+        return swapped_frame

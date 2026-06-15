@@ -15,10 +15,11 @@ def get_face_analyser() -> Any:
 
     if FACE_ANALYSER is None:
         FACE_ANALYSER = insightface.app.FaceAnalysis(
-            name='buffalo_l', 
+            name='buffalo_l',
             providers=core.globals.execution_providers
         )
-        FACE_ANALYSER.prepare(ctx_id=0, det_size=(640, 640))
+        det = getattr(core.globals, "det_size", 640)
+        FACE_ANALYSER.prepare(ctx_id=0, det_size=(det, det))
     return FACE_ANALYSER
 
 

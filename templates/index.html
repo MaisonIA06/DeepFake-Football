@@ -99,6 +99,13 @@
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
+                        <div class="option-item">
+                            <span class="option-label">Préserver mon teint</span>
+                            <label class="toggle">
+                                <input type="checkbox" id="preserveSkinTone">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -297,7 +304,7 @@
 
         // -------- Options --------
         function initOptions() {
-            const options = ['mouthMask', 'faceEnhancer', 'showFps', 'manyFaces'];
+            const options = ['mouthMask', 'faceEnhancer', 'showFps', 'manyFaces', 'preserveSkinTone'];
             options.forEach(opt => {
                 const el = document.getElementById(opt);
                 if (el) {
@@ -311,7 +318,8 @@
                 mouthMask: document.getElementById('mouthMask')?.checked || false,
                 faceEnhancer: document.getElementById('faceEnhancer')?.checked || false,
                 showFps: document.getElementById('showFps')?.checked || false,
-                manyFaces: document.getElementById('manyFaces')?.checked || false
+                manyFaces: document.getElementById('manyFaces')?.checked || false,
+                preserveSkinTone: document.getElementById('preserveSkinTone')?.checked || false
             };
         }
 

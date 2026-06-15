@@ -20,7 +20,8 @@ from flask import Flask, render_template, jsonify, request, send_from_directory,
 # Configuration
 from config import (
     BASE_DIR, STATIC_DIR, TEMPLATES_DIR, FACES_DIR,
-    PLAYERS_LEFT, PLAYERS_RIGHT, DEFAULT_OPTIONS, FLASK_CONFIG
+    PLAYERS_LEFT, PLAYERS_RIGHT, DEFAULT_OPTIONS, FLASK_CONFIG,
+    DET_SIZE, CAMERA_BUFFERSIZE
 )
 
 # Configuration du logging
@@ -49,6 +50,15 @@ app_state = {
     "source_face": None,
     "camera": None,
     "camera_lock": threading.Lock()
+}
+
+# Mapping des noms d'options frontend (camelCase) -> backend (snake_case)
+OPTION_MAP = {
+    "mouthMask": "mouth_mask",
+    "faceEnhancer": "face_enhancer",
+    "showFps": "show_fps",
+    "manyFaces": "many_faces",
+    "preserveSkinTone": "preserve_skin_tone",
 }
 
 # ============================================================
@@ -114,6 +124,10 @@ def init_ai_modules():
         else:
             core.globals.execution_providers = ['CPUExecutionProvider']
             logger.info("Mode CPU activé")
+
+        # Taille de détection (levier de performance, voir config.DET_SIZE)
+        core.globals.det_size = DET_SIZE
+        logger.info(f"Taille de détection des visages: {DET_SIZE}x{DET_SIZE}")
         
         logger.info("Modules IA initialisés avec succès")
         return True
@@ -134,6 +148,9 @@ def get_camera():
                 app_state["camera"].set(cv2.CAP_PROP_FRAME_WIDTH, 640)
                 app_state["camera"].set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
                 app_state["camera"].set(cv2.CAP_PROP_FPS, 30)
+                # Latence minimale : ne pas accumuler de frames en retard
+                if hasattr(cv2, "CAP_PROP_BUFFERSIZE"):
+                    app_state["camera"].set(cv2.CAP_PROP_BUFFERSIZE, CAMERA_BUFFERSIZE)
                 logger.info("Caméra initialisée")
         return app_state["camera"]
 
@@ -321,16 +338,19 @@ def api_start():
             return jsonify({"success": False, "error": "Impossible de charger le visage source"}), 400
         app_state["source_face"] = source_face
     
-    # Mettre à jour les options
+    # Mettre à jour les options (traduction camelCase front -> snake_case interne)
     data = request.get_json() or {}
     if data.get('options'):
-        app_state["options"].update(data['options'])
-    
+        for key, value in data['options'].items():
+            backend_key = OPTION_MAP.get(key, key)
+            if backend_key in app_state["options"]:
+                app_state["options"][backend_key] = value
+
     # Mettre à jour les globals
     import core.globals
     core.globals.many_faces = app_state["options"].get("many_faces", False)
     core.globals.mouth_mask = app_state["options"].get("mouth_mask", False)
-    core.globals.show_fps = app_state["options"].get("show_fps", False)
+    core.globals.preserve_skin_tone = app_state["options"].get("preserve_skin_tone", False)
     
     app_state["is_running"] = True
     
@@ -365,16 +385,8 @@ def api_option():
     data = request.get_json()
     option = data.get('option')
     value = data.get('value')
-    
-    # Mapping des noms d'options frontend -> backend
-    option_map = {
-        "mouthMask": "mouth_mask",
-        "faceEnhancer": "face_enhancer", 
-        "showFps": "show_fps",
-        "manyFaces": "many_faces"
-    }
-    
-    backend_option = option_map.get(option, option)
+
+    backend_option = OPTION_MAP.get(option, option)
     
     if backend_option not in app_state["options"]:
         return jsonify({"success": False, "error": f"Option inconnue: {option}"}), 400
@@ -387,6 +399,8 @@ def api_option():
         core.globals.many_faces = value
     elif backend_option == "mouth_mask":
         core.globals.mouth_mask = value
+    elif backend_option == "preserve_skin_tone":
+        core.globals.preserve_skin_tone = value
     
     logger.info(f"Option mise à jour: {backend_option} = {value}")
     

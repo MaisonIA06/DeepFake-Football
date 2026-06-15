@@ -225,13 +225,12 @@ body::before {
 /* -------- Player Grid -------- */
 .player-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    grid-auto-rows: 1fr;
     gap: 10px;
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right: 4px;
+    overflow: hidden;
 }
 
 /* -------- Player Card -------- */
@@ -239,6 +238,8 @@ body::before {
     display: flex;
     flex-direction: column;
     align-items: center;
+    height: 100%;
+    min-height: 0;
     padding: 0;
     background: rgba(26, 58, 92, 0.5);
     border: 2px solid rgba(255, 255, 255, 0.15);
@@ -304,9 +305,11 @@ body::before {
 
 .player-avatar {
     width: 100%;
-    aspect-ratio: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     border-radius: 10px 10px 0 0;
     object-fit: cover;
+    object-position: top center;
     border: none;
     transition: var(--transition-smooth);
 }

@@ -11,18 +11,19 @@
 
 ## 📋 Description
 
-DeepFake MIA est une application web permettant d'effectuer du **face swap en temps réel** via webcam. L'interface moderne et intuitive permet de sélectionner facilement un visage source parmi une galerie de joueurs et d'appliquer le deepfake instantanément.
+DeepFake MIA est une application web permettant d'effectuer du **face swap en temps réel** via webcam. L'interface moderne et intuitive permet de sélectionner facilement un visage source et d'appliquer le deepfake instantanément.
 
 ### ✨ Fonctionnalités
 
 - 🎥 **Face Swap temps réel** via webcam
-- 👤 **12 visages pré-configurés** (joueurs)
+- 👤 **2 visages pré-configurés** (Kylian Mbappé & Didier Deschamps)
 - 🎨 **Interface web moderne** (responsive)
 - 🚀 **Support GPU NVIDIA** (CUDA + cuDNN)
 - ⚙️ **Options avancées** :
   - Mouth Mask (préserve la bouche originale)
   - Face Enhancer (amélioration qualité GFPGAN)
   - Many Faces (multi-visages)
+  - Préserver mon teint (garde votre carnation tout en prenant les traits)
   - Affichage FPS
 
 ---
@@ -31,22 +32,21 @@ DeepFake MIA est une application web permettant d'effectuer du **face swap en te
 
 ```
 DeepFake-MIA/
-├── app.py                    # 🚀 Point d'entrée principal
+├── app.py                    # 🚀 Point d'entrée principal (Flask + caméra + streaming)
 ├── config.py                 # ⚙️ Configuration globale
 ├── requirements.txt          # 📦 Dépendances Python
 ├── README.md                 # 📖 Documentation
+├── CLAUDE.md                 # 🤖 Guide pour Claude Code
 ├── LICENSE                   # 📄 Licence
 │
-├── core/                     # 🧠 Logique métier
+├── core/                     # 🧠 Logique métier (pipeline IA)
 │   ├── __init__.py
-│   ├── globals.py            # Variables globales
-│   ├── face_analyser.py      # Détection de visage
-│   ├── video_capture.py      # Capture vidéo
-│   ├── utilities.py          # Fonctions utilitaires
-│   └── processors/           # Processeurs de frame
-│       └── frame/
-│           ├── face_swapper.py
-│           └── face_enhancer.py
+│   ├── globals.py            # Variables globales du pipeline
+│   ├── typing.py             # Types partagés (Face, Frame)
+│   ├── face_analyser.py      # Détection de visage (InsightFace)
+│   └── processors/frame/     # Processeurs de frame
+│       ├── face_swapper.py   # Face swap + mouth mask + préservation du teint
+│       └── face_enhancer.py  # Amélioration GFPGAN (optionnel)
 │
 ├── models/                   # 🤖 Modèles IA
 │   ├── inswapper_128_fp16.onnx
@@ -65,7 +65,8 @@ DeepFake-MIA/
 │   │   ├── MIA_Assets12.jpg  # Fond terracotta
 │   │   └── MIA_Blanc.png     # Logo MIA
 │   └── faces/
-│       └── *.png             # Visages des joueurs
+│       ├── MBAPPE.png        # Visages disponibles (<ID>.png)
+│       └── DESCHAMPS.png
 │
 └── templates/                # 📄 Templates HTML
     └── index.html
@@ -170,6 +171,7 @@ http://localhost:5000
 | **Mouth Mask** | Préserve la bouche originale | ✅ Léger |
 | **Face Enhancer** | Améliore la qualité (GFPGAN) | ⚠️ Lourd |
 | **Many Faces** | Swap tous les visages détectés | ⚠️ Lourd |
+| **Préserver mon teint** | Garde votre couleur de peau (traits du joueur, votre teint) | ✅ Léger |
 | **Show FPS** | Affiche les images/seconde | ✅ Aucun |
 
 ---
@@ -178,13 +180,15 @@ http://localhost:5000
 
 ### Ajouter de nouveaux visages
 
-1. Ajoutez l'image PNG dans `static/faces/` (format carré recommandé)
-2. Modifiez `config.py` pour ajouter le joueur :
+1. Ajoutez l'image dans `static/faces/` au format **`<ID>.png`** : le nom de fichier doit
+   correspondre exactement au champ `id` ci-dessous. Un portrait net (le visage occupant
+   une bonne partie de l'image) donne les meilleurs résultats ; l'avatar est cadré vers le haut.
+2. Modifiez `config.py` pour ajouter la personne :
 
 ```python
 PLAYERS = [
-    # ... joueurs existants ...
-    {"id": "NOUVEAU", "name": "Nouveau Joueur", "position": "left"},
+    # ... entrées existantes ...
+    {"id": "NOUVEAU", "name": "Nouvelle Personne", "position": "left"},  # -> static/faces/NOUVEAU.png
 ]
 ```
 
@@ -206,13 +210,17 @@ Modifiez `config.py` pour ajuster :
 FLASK_CONFIG = {
     "HOST": "0.0.0.0",    # Interface réseau
     "PORT": 5000,         # Port
-    "DEBUG": False,       # Mode debug (False en production)
 }
 
 # Performance
-EXECUTION_PROVIDERS = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-MAX_MEMORY = 8  # GB
+DET_SIZE = 320          # Taille de détection des visages : principal levier de FPS
+                        #   320 = rapide / 480 = équilibré / 640 = précis (à distance)
+CAMERA_BUFFERSIZE = 1   # Tampon caméra : 1 = latence minimale
 ```
+
+> ℹ️ `DET_SIZE` est lu une fois au démarrage : modifiez-le puis **redémarrez** `python app.py`
+> pour qu'il soit pris en compte. Si des visages proches/éloignés ne sont plus détectés,
+> remontez à `480` ou `640`.
 
 ---
 
@@ -254,8 +262,9 @@ pip install onnxruntime
 ### Performance faible
 
 - ✅ Utilisez un **GPU NVIDIA** avec CUDA
+- ⚙️ Réduisez **`DET_SIZE`** dans `config.py` (320 = rapide ; principal levier de FPS)
 - ⚠️ Désactivez **"Face Enhancer"** (très gourmand)
-- 📉 Réduisez la résolution dans `app.py` (640x480 par défaut)
+- 📉 Réduisez la résolution caméra dans `app.py` (640x480 par défaut)
 
 ### Segmentation fault
 

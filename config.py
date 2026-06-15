@@ -25,18 +25,8 @@ GFPGAN_WEIGHTS_DIR = os.path.join(BASE_DIR, 'gfpgan', 'weights')
 # ============================================================
 
 PLAYERS = [
-    {"id": "AH-KONG", "name": "Ah-Kong", "position": "left"},
-    {"id": "BARNES", "name": "Barnes", "position": "left"},
-    {"id": "BRIGGS", "name": "Briggs", "position": "left"},
-    {"id": "CASTELNAU", "name": "Castelnau", "position": "left"},
-    {"id": "DULSKI", "name": "Dulski", "position": "left"},
-    {"id": "KEEMINK", "name": "Keemink", "position": "left"},
-    {"id": "KICIAK", "name": "Kiciak", "position": "right"},
-    {"id": "LIBERMAN", "name": "Liberman", "position": "right"},
-    {"id": "MCHENRY", "name": "McHenry", "position": "right"},
-    {"id": "NACK-MINYEM", "name": "Nack-Minyem", "position": "right"},
-    {"id": "NAMBOUE", "name": "Namboue", "position": "right"},
-    {"id": "RAJOHARIVELO", "name": "Rajoharivelo", "position": "right"},
+    {"id": "MBAPPE", "name": "Kylian Mbappé", "position": "left"},
+    {"id": "DESCHAMPS", "name": "Didier Deschamps", "position": "right"},
 ]
 
 PLAYERS_LEFT = [p for p in PLAYERS if p["position"] == "left"]
@@ -51,6 +41,7 @@ DEFAULT_OPTIONS = {
     "face_enhancer": False,
     "show_fps": False,
     "many_faces": False,
+    "preserve_skin_tone": False,
 }
 
 # ============================================================
@@ -71,3 +62,19 @@ FLASK_CONFIG = {
 EXECUTION_PROVIDERS = ['CUDAExecutionProvider', 'CPUExecutionProvider']
 EXECUTION_THREADS = 8
 MAX_MEMORY = 8  # GB
+
+# ============================================================
+# Performance
+# ============================================================
+
+# Taille de l'image de détection des visages (carré, en pixels).
+# C'est le principal levier de FPS : plus petit = plus rapide, mais détecte
+# moins bien les visages éloignés/petits.
+#   320 = rapide  (recommandé webcam, sujet proche de la caméra)
+#   480 = équilibré
+#   640 = précis  (détection à distance) mais plus lent
+DET_SIZE = 320
+
+# Tampon de la caméra. 1 = latence minimale : on traite toujours la frame la
+# plus récente au lieu de vider une file d'images en retard.
+CAMERA_BUFFERSIZE = 1

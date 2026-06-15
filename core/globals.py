@@ -1,46 +1,25 @@
-import os
-from typing import List, Dict, Any
+"""
+DeepFake MIA - Variables globales du pipeline IA
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-WORKFLOW_DIR = os.path.join(ROOT_DIR, "workflow")
+Ces variables sont lues directement par les modules de core/ (face_analyser,
+face_swapper). app.py les synchronise depuis app_state lors du démarrage du
+swap et des changements d'options.
+"""
 
-file_types = [
-    ("Image", ("*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp")),
-    ("Video", ("*.mp4", "*.mkv")),
-]
+from typing import List
 
-source_target_map = []
-simple_map = {}
-
-source_path = None
-target_path = None
-output_path = None
-frame_processors: List[str] = []
-keep_fps = True
-keep_audio = False
-keep_frames = False
-many_faces = False
-map_faces = False
-color_correction = False  # New global variable for color correction toggle
-nsfw_filter = False
-video_encoder = "libx264"
-video_quality = 18
-live_mirror = False
-live_resizable = True
-max_memory = 8
+# Execution providers ONNX Runtime — défini par init_ai_modules() au démarrage
 execution_providers: List[str] = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-execution_threads = 8
-headless = None
-log_level = "error"
-fp_ui: Dict[str, bool] = {"face_enhancer": False}
-camera_input_combobox = None
-webcam_preview_running = False
-show_fps = False
+
+# Taille de détection des visages — synchronisée depuis config.DET_SIZE au démarrage
+det_size = 640
+
+# Options de swap (synchronisées depuis app_state dans app.py)
+many_faces = False
 mouth_mask = False
-show_mouth_mask_box = False
+preserve_skin_tone = False
+
+# Paramètres du masque de bouche — lus par face_swapper.create_lower_mouth_mask
 mask_feather_ratio = 8
 mask_down_size = 0.50
 mask_size = 1
-
-# Face source pour le swap en temps réel
-source_face = None
