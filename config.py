@@ -41,7 +41,6 @@ DEFAULT_OPTIONS = {
     "face_enhancer": False,
     "show_fps": False,
     "many_faces": False,
-    "preserve_skin_tone": False,
 }
 
 # ============================================================

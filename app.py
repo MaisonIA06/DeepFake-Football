@@ -58,7 +58,6 @@ OPTION_MAP = {
     "faceEnhancer": "face_enhancer",
     "showFps": "show_fps",
     "manyFaces": "many_faces",
-    "preserveSkinTone": "preserve_skin_tone",
 }
 
 # ============================================================
@@ -350,8 +349,7 @@ def api_start():
     import core.globals
     core.globals.many_faces = app_state["options"].get("many_faces", False)
     core.globals.mouth_mask = app_state["options"].get("mouth_mask", False)
-    core.globals.preserve_skin_tone = app_state["options"].get("preserve_skin_tone", False)
-    
+
     app_state["is_running"] = True
     
     logger.info(f"DeepFake démarré avec visage: {app_state['selected_player']}")
@@ -399,9 +397,7 @@ def api_option():
         core.globals.many_faces = value
     elif backend_option == "mouth_mask":
         core.globals.mouth_mask = value
-    elif backend_option == "preserve_skin_tone":
-        core.globals.preserve_skin_tone = value
-    
+
     logger.info(f"Option mise à jour: {backend_option} = {value}")
     
     return jsonify({
