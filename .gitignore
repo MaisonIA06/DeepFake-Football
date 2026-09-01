@@ -63,6 +63,15 @@ gfpgan/weights/*.pt
 # !models/GFPGANv1.4.pth
 
 # ============================================================
+# Copie locale du projet (ne pas versionner)
+# ============================================================
+DeepFake/
+
+# Visage non détectable par InsightFace (rat de Ratatouille) — conservé
+# localement à titre d'archive, inutilisable dans la galerie
+static/faces/remy-ratatouille.png
+
+# ============================================================
 # Fichiers temporaires
 # ============================================================
 *.tmp

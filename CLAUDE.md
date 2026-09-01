@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Vue d'ensemble
 
-**DeepFake MIA** est une application web Flask de face swap en temps réel via webcam. Le serveur capture la webcam côté serveur (et non navigateur), applique un face swap image par image avec le modèle InsightFace `inswapper_128`, puis diffuse le flux au navigateur via MJPEG (`multipart/x-mixed-replace`). Le visage source est choisi dans une galerie de joueurs prédéfinis.
+**DeepFake MIA** est une application web Flask de face swap en temps réel via webcam. Le serveur capture la webcam côté serveur (et non navigateur), applique un face swap image par image avec le modèle InsightFace `inswapper_128`, puis diffuse le flux au navigateur via MJPEG (`multipart/x-mixed-replace`). Le visage source est choisi dans une galerie prédéfinie.
+
+**Démonstrateur événementiel re-thématisable** : le projet est réutilisé d'un évènement à l'autre en ne changeant que `THEME` (textes de l'UI : titre, sous-titre, titre des panneaux, icône) et `PLAYERS` (galerie) dans `config.py`, plus les images `static/faces/`. Thème courant : **Gastronomie** (grands chefs de cuisine). Le reste du code est thème-agnostique — ne pas coder en dur de texte lié au thème ailleurs que dans `config.py`.
 
 Le coeur du pipeline (`core/`) est dérivé de Deep-Live-Cam ; `app.py` et `config.py` sont la couche web/UI propre à MIA.
 
@@ -73,7 +75,7 @@ L'app démarre sans eux mais le swap/enhancer échouera silencieusement (frame o
 
 ## Conventions importantes
 
-- **Ajouter un visage** : déposer `static/faces/<ID>.png` (carré, visage net) ET ajouter une entrée dans `PLAYERS` (`config.py`) avec `position: "left"` ou `"right"`. L'`id` doit correspondre exactement au nom de fichier sans extension.
+- **Ajouter un visage** : déposer `static/faces/<id>.png` (PNG obligatoire — le chargement construit `<id>.png` en dur et OpenCV ne lit pas l'AVIF ; convertir avant) ET ajouter une entrée dans `PLAYERS` (`config.py`) avec `position: "left"` ou `"right"`. L'`id` doit correspondre exactement au nom de fichier sans extension. ⚠️ Vérifier la détection après ajout : les visages non humains (mascottes, animaux type Rémy de Ratatouille) ne sont pas détectés par InsightFace et sont inutilisables ; les personnages animés humains (ex. Alfredo Linguini) passent.
 - **Caméra** : ouverte côté serveur en 640×480@30 sur l'index `0`. Une seule session caméra à la fois (verrou `camera_lock`).
 - **NumPy** : épinglé `<2.0.0` — NumPy 2.x casse les binaires compilés (insightface/opencv) et provoque des segfaults. Ne pas relâcher cette contrainte.
 - **Debug Flask** : `app.run(debug=False)` est forcé dans `main()` même si `config.FLASK_CONFIG["DEBUG"]` vaut `True` — le reloader du mode debug entre en conflit avec la caméra.

@@ -20,7 +20,7 @@ from flask import Flask, render_template, jsonify, request, send_from_directory,
 # Configuration
 from config import (
     BASE_DIR, STATIC_DIR, TEMPLATES_DIR, FACES_DIR,
-    PLAYERS_LEFT, PLAYERS_RIGHT, DEFAULT_OPTIONS, FLASK_CONFIG,
+    THEME, PLAYERS_LEFT, PLAYERS_RIGHT, DEFAULT_OPTIONS, FLASK_CONFIG,
     DET_SIZE, CAMERA_BUFFERSIZE
 )
 
@@ -264,6 +264,7 @@ def index():
     """Page principale de l'application"""
     return render_template(
         'index.html',
+        theme=THEME,
         players_left=PLAYERS_LEFT,
         players_right=PLAYERS_RIGHT
     )
@@ -327,9 +328,18 @@ def api_select_face():
 @app.route('/api/start', methods=['POST'])
 def api_start():
     """Démarrer le deepfake"""
+    data = request.get_json() or {}
+
+    # Le player envoyé au démarrage fait autorité : si des sélections rapides
+    # se sont chevauchées, on recharge le visage réellement affiché côté UI.
+    requested_player = data.get('player')
+    if requested_player and requested_player != app_state["selected_player"]:
+        app_state["selected_player"] = requested_player
+        app_state["source_face"] = None
+
     if not app_state["selected_player"]:
         return jsonify({"success": False, "error": "Aucun visage sélectionné"}), 400
-    
+
     if app_state["source_face"] is None:
         # Tenter de recharger le visage
         source_face = load_source_face(app_state["selected_player"])
@@ -338,7 +348,6 @@ def api_start():
         app_state["source_face"] = source_face
     
     # Mettre à jour les options (traduction camelCase front -> snake_case interne)
-    data = request.get_json() or {}
     if data.get('options'):
         for key, value in data['options'].items():
             backend_key = OPTION_MAP.get(key, key)

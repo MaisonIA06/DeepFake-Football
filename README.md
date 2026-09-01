@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)
 ![CUDA](https://img.shields.io/badge/CUDA-12.x-green.svg)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+![License](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)
 
 ---
 
@@ -13,17 +13,23 @@
 
 DeepFake MIA est une application web permettant d'effectuer du **face swap en temps réel** via webcam. L'interface moderne et intuitive permet de sélectionner facilement un visage source et d'appliquer le deepfake instantanément.
 
+L'application est un **démonstrateur événementiel réutilisable** : à chaque évènement, seuls
+le thème (`THEME` dans `config.py`) et la galerie de visages (`PLAYERS` + `static/faces/`)
+changent. **Thème actuel : Gastronomie** 👨‍🍳 — grands chefs de cuisine (Auguste Escoffier,
+Joël Robuchon, Anne-Sophie Pic, Philippe Etchebest, Thierry Marx, Maïté, Virginie Basselot,
+Louis-Camille Maillard) et Alfredo Linguini (Ratatouille).
+
 ### ✨ Fonctionnalités
 
 - 🎥 **Face Swap temps réel** via webcam
-- 👤 **2 visages pré-configurés** (Kylian Mbappé & Didier Deschamps)
+- 👨‍🍳 **9 visages pré-configurés** (thème Gastronomie)
+- 🎪 **Thème adaptable par évènement** (textes et galerie via `config.py`)
 - 🎨 **Interface web moderne** (responsive)
 - 🚀 **Support GPU NVIDIA** (CUDA + cuDNN)
 - ⚙️ **Options avancées** :
   - Mouth Mask (préserve la bouche originale)
   - Face Enhancer (amélioration qualité GFPGAN)
   - Many Faces (multi-visages)
-  - Préserver mon teint (garde votre carnation tout en prenant les traits)
   - Affichage FPS
 
 ---
@@ -45,7 +51,7 @@ DeepFake-MIA/
 │   ├── typing.py             # Types partagés (Face, Frame)
 │   ├── face_analyser.py      # Détection de visage (InsightFace)
 │   └── processors/frame/     # Processeurs de frame
-│       ├── face_swapper.py   # Face swap + mouth mask + préservation du teint
+│       ├── face_swapper.py   # Face swap + mouth mask
 │       └── face_enhancer.py  # Amélioration GFPGAN (optionnel)
 │
 ├── models/                   # 🤖 Modèles IA
@@ -64,9 +70,11 @@ DeepFake-MIA/
 │   ├── images/
 │   │   ├── MIA_Assets12.jpg  # Fond terracotta
 │   │   └── MIA_Blanc.png     # Logo MIA
-│   └── faces/
-│       ├── MBAPPE.png        # Visages disponibles (<ID>.png)
-│       └── DESCHAMPS.png
+│   └── faces/                # Visages disponibles (<id>.png, thème courant)
+│       ├── auguste-escoffier.png
+│       ├── joel-robuchon.png
+│       ├── anne-sophie-pic.png
+│       └── ...
 │
 └── templates/                # 📄 Templates HTML
     └── index.html
@@ -171,28 +179,47 @@ http://localhost:5000
 | **Mouth Mask** | Préserve la bouche originale | ✅ Léger |
 | **Face Enhancer** | Améliore la qualité (GFPGAN) | ⚠️ Lourd |
 | **Many Faces** | Swap tous les visages détectés | ⚠️ Lourd |
-| **Préserver mon teint** | Garde votre couleur de peau (traits du joueur, votre teint) | ✅ Léger |
 | **Show FPS** | Affiche les images/seconde | ✅ Aucun |
 
 ---
 
-## 🎨 Personnalisation
+## 🎨 Adapter le thème pour un nouvel évènement
 
-### Ajouter de nouveaux visages
+Le projet est conçu pour être re-thématisé à chaque évènement. Deux choses à changer :
 
-1. Ajoutez l'image dans `static/faces/` au format **`<ID>.png`** : le nom de fichier doit
+### 1. Les textes du thème (`THEME` dans `config.py`)
+
+```python
+THEME = {
+    "event": "Gastronomie",                          # Nom du thème
+    "title": "DeepFake",                             # Titre du header
+    "subtitle": "Prenez le visage d'un grand chef",  # Sous-titre du header
+    "panel_title": "Choisissez un chef",             # Titre des panneaux de sélection
+    "placeholder_icon": "🍳",                        # Icône du cadre caméra
+}
+```
+
+### 2. La galerie de visages
+
+1. Ajoutez l'image dans `static/faces/` au format **`<id>.png`** : le nom de fichier doit
    correspondre exactement au champ `id` ci-dessous. Un portrait net (le visage occupant
    une bonne partie de l'image) donne les meilleurs résultats ; l'avatar est cadré vers le haut.
-2. Modifiez `config.py` pour ajouter la personne :
+2. Modifiez `PLAYERS` dans `config.py` pour ajouter la personne :
 
 ```python
 PLAYERS = [
     # ... entrées existantes ...
-    {"id": "NOUVEAU", "name": "Nouvelle Personne", "position": "left"},  # -> static/faces/NOUVEAU.png
+    {"id": "nouvelle-personne", "name": "Nouvelle Personne", "position": "left"},  # -> static/faces/nouvelle-personne.png
 ]
 ```
 
-### Modifier le thème
+> ⚠️ **PNG uniquement** (le chargement se fait en `<id>.png` ; OpenCV ne lit pas l'AVIF —
+> convertissez vos images avant). Vérifiez qu'un visage est bien détecté après ajout
+> (message « Visage prêt » à la sélection) : les visages **non humains** (mascottes,
+> animaux, personnages trop stylisés comme Rémy de Ratatouille) ne sont **pas détectés**
+> par InsightFace et ne peuvent pas être utilisés.
+
+### 3. (Optionnel) Le style visuel
 
 Éditez `static/css/style.css` pour personnaliser :
 - Couleurs (variables CSS)
@@ -290,7 +317,11 @@ pip install "numpy<2.0.0"
 
 ## 📄 Licence
 
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+Ce projet est sous licence **GNU AGPL-3.0**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+Le pipeline de face swap (`core/`) est dérivé de
+[Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam), publié sous licence AGPL-3.0 :
+les travaux dérivés doivent conserver cette licence.
 
 ---
 
@@ -299,6 +330,7 @@ Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de 
 Développé par **MIA - La Maison de l'IA**
 
 Technologies utilisées :
+- [Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) - Pipeline de face swap (base du dossier `core/`)
 - [InsightFace](https://github.com/deepinsight/insightface) - Détection et analyse faciale
 - [GFPGAN](https://github.com/TencentARC/GFPGAN) - Amélioration de visage
 - [ONNX Runtime](https://onnxruntime.ai/) - Inférence optimisée

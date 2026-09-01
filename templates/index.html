@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeepFake - MIA La Maison de l'IA</title>
+    <title>{{ theme.title }} {{ theme.event }} - MIA La Maison de l'IA</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -19,8 +19,8 @@
             <div class="logo-container">
                 <img src="{{ url_for('serve_image', filename='MIA_Blanc.png') }}" alt="MIA - La Maison de l'IA" class="logo">
                 <div>
-                    <h1 class="app-title">DeepFake</h1>
-                    <p class="app-subtitle">Face Swap en temps réel</p>
+                    <h1 class="app-title">{{ theme.title }}</h1>
+                    <p class="app-subtitle">{{ theme.subtitle }}</p>
                 </div>
             </div>
             <div class="status-indicator">
@@ -31,12 +31,12 @@
 
         <!-- Contenu Principal -->
         <main class="main-content">
-            <!-- Panel Gauche - Joueurs 1-6 -->
+            <!-- Panel Gauche - Visages -->
             <aside class="panel">
-                <h2 class="panel-title">Sélection Visage</h2>
+                <h2 class="panel-title">{{ theme.panel_title }}</h2>
                 <div class="player-grid" id="leftGrid">
                     {% for player in players_left %}
-                    <div class="player-card" data-player="{{ player.id }}" tabindex="0" role="button">
+                    <div class="player-card" data-player="{{ player.id }}" data-name="{{ player.name }}" tabindex="0" role="button">
                         <img src="{{ url_for('serve_face', filename=player.id + '.png') }}" 
                              alt="{{ player.name }}" 
                              class="player-avatar">
@@ -52,7 +52,7 @@
                     <div class="camera-feed" id="cameraFeed">
                         <img id="videoStream" alt="Video Stream" style="display: none; width: 100%; height: 100%; object-fit: contain;">
                         <div class="camera-placeholder" id="placeholder">
-                            <div class="camera-placeholder-icon">🎥</div>
+                            <div class="camera-placeholder-icon">{{ theme.placeholder_icon }}</div>
                             <p class="camera-placeholder-text">Sélectionnez un visage puis cliquez sur "Démarrer"</p>
                         </div>
                     </div>
@@ -103,12 +103,12 @@
                 </div>
             </section>
 
-            <!-- Panel Droit - Joueurs 7-12 -->
+            <!-- Panel Droit - Visages -->
             <aside class="panel">
-                <h2 class="panel-title">Sélection Visage</h2>
+                <h2 class="panel-title">{{ theme.panel_title }}</h2>
                 <div class="player-grid" id="rightGrid">
                     {% for player in players_right %}
-                    <div class="player-card" data-player="{{ player.id }}" tabindex="0" role="button">
+                    <div class="player-card" data-player="{{ player.id }}" data-name="{{ player.name }}" tabindex="0" role="button">
                         <img src="{{ url_for('serve_face', filename=player.id + '.png') }}" 
                              alt="{{ player.name }}" 
                              class="player-avatar">
@@ -138,6 +138,8 @@
         // -------- Configuration --------
         const API_BASE = '';
         let selectedPlayer = null;
+        let selectedPlayerName = null;
+        let selectRequestId = 0;
         let isRunning = false;
         let faceLoaded = false;
 
@@ -178,9 +180,14 @@
             // Sélectionner le nouveau joueur
             card.classList.add('selected');
             selectedPlayer = card.dataset.player;
+            selectedPlayerName = card.dataset.name || selectedPlayer;
             
             updateStatus('Chargement du visage...', 'warning');
-            
+
+            // Jeton anti-course : seule la réponse de la DERNIÈRE sélection compte
+            const requestId = ++selectRequestId;
+            const requestedName = selectedPlayerName;
+
             // Envoyer au serveur pour charger le visage
             fetch(`${API_BASE}/api/select_face`, {
                 method: 'POST',
@@ -189,16 +196,18 @@
             })
             .then(response => response.json())
             .then(data => {
+                if (requestId !== selectRequestId) return; // réponse obsolète, ignorée
                 if (data.success) {
                     faceLoaded = true;
                     console.log('Face chargée:', selectedPlayer);
-                    updateStatus('Visage prêt: ' + selectedPlayer, 'success');
+                    updateStatus('Visage prêt : ' + requestedName, 'success');
                 } else {
                     faceLoaded = false;
                     updateStatus('Erreur: ' + data.error, 'error');
                 }
             })
             .catch(err => {
+                if (requestId !== selectRequestId) return;
                 faceLoaded = false;
                 console.error('Erreur:', err);
                 updateStatus('Erreur de connexion', 'error');
@@ -261,7 +270,7 @@
             .then(data => {
                 if (data.success) {
                     console.log('DeepFake démarré:', data);
-                    updateStatus('DeepFake actif - ' + selectedPlayer, 'running');
+                    updateStatus('DeepFake actif - ' + selectedPlayerName, 'running');
                     // Démarrer le streaming après que le serveur soit prêt
                     setTimeout(startVideoStream, 500);
                 } else {
